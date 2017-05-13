@@ -124,6 +124,22 @@ describe("Router", function()
       assert.equal("api-1", res.headers["kong-api-name"])
     end)
 
+    it("preserves URI arguments", function()
+      local res = assert(client:send {
+        method = "GET",
+        path   = "/get",
+        query  = {
+          foo   = "bar",
+          hello = "world",
+        },
+      })
+
+      local body = assert.res_status(200, res)
+      local json = cjson.decode(body)
+      assert.equal("bar", json.args.foo)
+      assert.equal("world", json.args.hello)
+    end)
+
     describe("API with a path component in its upstream_url", function()
       it("with strip_uri = true", function()
         local res = assert(client:send {

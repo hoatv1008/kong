@@ -88,7 +88,7 @@ return {
 
       ctx.KONG_ACCESS_START = get_now()
 
-      local api, upstream, host_header = router.exec(ngx)
+      local api, upstream, host_header, uri = router.exec(ngx)
       if not api then
         return responses.send_HTTP_NOT_FOUND("no API found with those values")
       end
@@ -119,6 +119,7 @@ return {
       var.upstream_scheme = upstream.scheme
 
       ctx.api              = api
+      ctx.uri              = uri
       ctx.balancer_address = balancer_address
 
       local ok, err = balancer_execute(balancer_address)
@@ -136,6 +137,17 @@ return {
     -- Only executed if the `router` module found an API and allows nginx to proxy it.
     after = function()
       local ctx = ngx.ctx
+      local var = ngx.var
+
+      local uri      = ctx.uri
+      local uri_args = var.args
+
+      if uri_args then
+        uri = uri .. "?" .. uri_args
+      end
+
+      var.upstream_uri = uri
+
       local now = get_now()
 
       ctx.KONG_ACCESS_TIME = now - ctx.KONG_ACCESS_START -- time spent in Kong's access_by_lua
