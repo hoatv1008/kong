@@ -64,7 +64,8 @@ describe("SSL", function()
     })
 
     assert(helpers.start_kong {
-      nginx_conf = "spec/fixtures/custom_nginx.template",
+      nginx_conf  = "spec/fixtures/custom_nginx.template",
+      trusted_ips = "127.0.0.1",
     })
 
     admin_client = helpers.admin_client()
@@ -164,6 +165,32 @@ describe("SSL", function()
         headers = {
           Host = "example.com",
           ["x-forwarded-proto"] = "httpsa"
+        }
+      })
+      assert.res_status(426, res)
+    end)
+
+    it("allows with https x-forwarded-proto from trusted client", function()
+      local res = assert(client:send {
+        method = "GET",
+        path = "/status/200",
+        headers = {
+          Host = "example.com",
+          ["x-forwarded-proto"] = "https"
+        }
+      })
+      assert.res_status(200, res)
+    end)
+
+    pending("blocks with https x-forwarded-proto from untrusted client", function()
+      -- FIXME how do we gracefully restart kong here with a separate config
+      -- that does not contain a trusted_ips block?
+      local res = assert(client:send {
+        method = "GET",
+        path = "/status/200",
+        headers = {
+          Host = "example.com",
+          ["x-forwarded-proto"] = "https"
         }
       })
       assert.res_status(426, res)
