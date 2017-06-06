@@ -20,6 +20,8 @@ local balancer_execute = require("kong.core.balancer").execute
 
 local router, router_err
 local ngx_now = ngx.now
+local sub = string.sub
+
 local server_header = _KONG._NAME.."/".._KONG._VERSION
 
 
@@ -119,7 +121,6 @@ return {
       var.upstream_scheme = upstream.scheme
 
       ctx.api              = api
-      ctx.uri              = uri
       ctx.balancer_address = balancer_address
 
       local ok, err = balancer_execute(balancer_address)
@@ -129,7 +130,12 @@ return {
           "' with: "..tostring(err))
       end
 
-      -- if set `host_header` is the original header to be preserved
+      -- `uri` is the URI with which to call upstream, as returned by the
+      -- router, which might have truncated it (`strip_uri`).
+      --
+      -- If set `host_header` is the original header to be preserved.
+
+      var.upstream_uri  = uri
       var.upstream_host = host_header or
           balancer_address.hostname..":"..balancer_address.port
 
@@ -139,14 +145,18 @@ return {
       local ctx = ngx.ctx
       local var = ngx.var
 
-      local uri      = ctx.uri
-      local uri_args = var.args
+      do
+        -- Nginx's behavior when proxying a request with an empty querystring
+        -- `/foo?` is to keep `$is_args` an empty string, hence effectively
+        -- stripping the empty querystring.
+        -- We overcome this behavior with our own logic, to prevent user
+        -- desired semantics.
+        local upstream_uri = var.upstream_uri
 
-      if uri_args then
-        uri = uri .. "?" .. uri_args
+        if var.is_args == "?" or sub(var.request_uri, -1) == "?" then
+          var.upstream_uri = upstream_uri .. "?" .. (var.args or "")
+        end
       end
-
-      var.upstream_uri = uri
 
       local now = get_now()
 
