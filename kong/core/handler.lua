@@ -20,7 +20,7 @@ local balancer_execute = require("kong.core.balancer").execute
 
 local router, router_err
 local ngx_now = ngx.now
-local server_header = _KONG._NAME.."/".._KONG._VERSION
+local server_header = _KONG._NAME .. "/" .. _KONG._VERSION
 
 
 local function get_now()
@@ -123,14 +123,14 @@ return {
 
       local ok, err = balancer_execute(balancer_address)
       if not ok then
-        return responses.send_HTTP_INTERNAL_SERVER_ERROR("failed the initial "..
-          "dns/balancer resolve for '"..balancer_address.host..
-          "' with: "..tostring(err))
+        return responses.send_HTTP_INTERNAL_SERVER_ERROR("failed the initial " ..
+          "dns/balancer resolve for '" .. balancer_address.host ..
+          "' with: " .. tostring(err))
       end
 
       -- if set `host_header` is the original header to be preserved
       var.upstream_host = host_header or
-          balancer_address.hostname..":"..balancer_address.port
+          balancer_address.hostname .. ":" .. balancer_address.port
 
     end,
     -- Only executed if the `router` module found an API and allows nginx to proxy it.
